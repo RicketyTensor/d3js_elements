@@ -1,0 +1,38 @@
+{
+    "name": "Main",
+    "children":[
+        {"name": "Preproc",
+         "children":[
+              {"name": "Parse input", 
+               "children":[
+                   {"name": "Read SSC", "value": 3.4},
+                   {"name": "Read BDF", "value": 6.6},
+                   {"name": "Read ODD", "value": 5.2}
+               ]
+               },
+              {"name": "Build database", 
+               "value": 10.6},
+              {"name": "Make matrices", 
+               "value": 5.1}
+            ]
+        },
+        {"name": "Solver",
+         "children":[
+             {"name": "Compute RHS",
+              "value": 5.0},
+             {"name": "Reduce BCs",
+              "value": 3.6},
+             {"name": "Solve",
+              "value": 8.9}
+             ]
+        },
+        {"name": "Post",
+         "children":[
+             {"name": "Responses",
+              "value": 4.1},
+             {"name": "Write",
+              "value": 3.8}
+            ]
+        }
+    ]
+}

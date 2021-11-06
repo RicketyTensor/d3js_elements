@@ -1,0 +1,11 @@
+Category,Value
+Read SSC,3.4
+Read BDF,6.6
+Read ODD,5.2
+Build database,10.6
+Make matrices,5.1
+Compute RHS,5.0
+Reduce BCs,3.6
+Solve,8.9
+Responses,4.1
+Write,3.8

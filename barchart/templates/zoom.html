@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Add a temporary no chache flag for development purposes -->
+        <META HTTP-EQUIV="PRAGMA" CONTENT="NO-CACHE">
+        <script type="text/javascript" src="{{ url_for('static', filename = 'zoom_bar.js') }}"></script>
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename = 'css/zoom_style.css') }}">
+    </head>
+    <body>
+        <!-- Load d3.js --> 
+        <script src="https://d3js.org/d3.v6.js"></script>
+
+        <h1>Testing a zoomable bar chart</h1>
+        <!-- Define div for the treeview -->
+        <div id="div_treeview"></div>
+
+        <!-- Run the script for the treeview-->
+        <script type="text/javascript">
+            zoomTreeFunc(JSON.parse('{{ data | tojson | safe }}'));
+        </script>  
+
+    </body>
+</html>
