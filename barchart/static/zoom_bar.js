@@ -1,27 +1,20 @@
-function zoomTreeFunc(data) {
+function zoomBarFunc(data) {
     // Basic size information
-    var margin = {top: 30, right: 50, bottom: 20, left: 100};
+    var margin = {top: 10, right: 10, bottom: 10, left: 10};
+    var padding = {top: 20, right: 10, bottom: 10, left: 100};
     var svgWidth = 600;
-    var svgHeight = 800;
-    var graphWidth = svgWidth - margin.left - margin.right;
-    var graphHeight = svgHeight - margin.top - margin.bottom;
+    var svgHeight = 300;
+    
+    // Basic formatting variables
+    duration = 150;
+    barHeight = 30;
+    barPadding = 3 / barHeight;
 
-	// Create x and y scales
-	var x = d3.scaleLinear()
-		.domain([0, width])
-		.range([0, width]);
-
-	var y = d3.scaleLinear()
-		.domain([0, height])
-        .range([0, height]);
-        
     // Ceate svg canvas
-    var svg = d3.select("#div_treeview")
+    var svg = d3.select("#div_chart")
         .append("svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.bottom + margin.top)
-            .style("margin-left", -margin.left + "px")
-            .style("margin.right", -margin.right + "px")
+            .attr("width", svgWidth)
+            .attr("height", svgHeight)
         .append("g")
             .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
             .style("shape-rendering", "crispEdges");
@@ -29,200 +22,240 @@ function zoomTreeFunc(data) {
     // Build up tree hierarchy with d3
     var root = d3.hierarchy(data)
         .sum(function (d) {return d.value;})
-        // .sort(function (a, b) {return b.height - a.height || b.value - a.value;});
+        .sort(function (a, b) {return b.value - a.value;})
+        .eachAfter(d => d.index = d.parent ? d.parent.index = d.parent.index + 1 || 0 : 0);
 
-    alert(root.value);
-
+    // Set graph sizes
+    var maxChildren = 1;
+    root.each(d => d.children && (maxChildren = Math.max(maxChildren, d.children.length)));
+    const graphHeight = maxChildren * barHeight + margin.top + margin.bottom + padding.top + padding.bottom;
+    const graphWidth = svgWidth - margin.left - margin.right;
 
     // Assign colors
-    var categories = [];
-    data["children"].forEach(function(x, i) {categories[i] = x["name"];});
     var color = d3.scaleOrdinal()
-        .domain(categories)
-        .range(d3.schemeCategory10);
+        .domain([true, false])
+        .range(["steelblue", "#aaa"]);
 
-    // Prepare rectangle to be able to go back
-    var grandparent = svg.append("g")
-        .attr("class", "grandparent");
+	// Set up X
+	var x = d3.scaleLinear()
+		.domain([margin.left + padding.left, graphWidth - padding.right])
+		.range([margin.left + padding.left, graphWidth - padding.right]);
+    xAxis = g => g
+        .attr("class", "x-axis")
+        .attr("transform", "translate(0," + (margin.top + padding.top) +  ")")
+        .call(d3.axisTop(x).ticks(graphWidth / 80, "s"))
+        .call(g => (g.selection ? g.selection() : g).select(".domain").remove())
 
-    grandparent.append("rect")
-        .attr("y", -margin.top)
-        .attr("width", width)
-        .attr("height", margin.top);
+    // Set up Y
+    yAxis = g => g
+        .attr("class", "y-axis")
+        .attr("transform", "translate(" + (margin.left + 0.5) + ",0)")
+        .call(g => g.append("line"))
+            .attr("stroke", "currentColor")
+            .attr("y1", margin.top)
+            .attr("y2", graphHeight);
 
-    grandparent.append("text")
-        .attr("x", 8)
-        .attr("y", 8 - margin.top)
-        .attr("dy", ".75em");
+    // Build up tree
+    var root = d3.hierarchy(data)
+        .sum(d => d.value)
+        .sort((a,b) => b.value - a.value)
+        .eachAfter(d => d.index = d.parent ? d.parent.index = d.parent.index +1 || 0 : 0)
 
-    // Declare d3 graph
-    var treemap = d3.treemap()
-        .size([width, height])
-        .paddingInner(0)
-        .round(false);
-
-
-    treemap(root);
-
-    // Run main function from root
-    display(root);
-
-    // Main visualization function
-    function display(d) {
-        // Prepare grandparent
-        grandparent
-            .datum(d.parent)
-            .on("click", transition)
-            .select("text")
-            .text(name(d));
-
-        grandparent
-            .datum(d.parent)
-            .select("rect")
-            .attr("fill", function () {
-                return '#bbbbbb'
-            });
-
-        var g1 = svg.insert("g", ".grandparent")
-            .datum(d)
-            .attr("class", "depth");
-
-        var g = g1.selectAll("g")
-            .data(d.children)
-            .enter().
-            append("g");
-
-        // Add class and click handler
-        // ---------------------------
-        // Add a transition function to g's with children
-        g.filter(function (d) {return d.children;})
-            .classed("children", true)
-            .on("click", transition);
-
-        // Add rectangles for children
-        g.selectAll(".child")
-            .data(function (d) {return d.children || [d];})
-            .enter().append("rect")
-            .attr("class", "child")
-            .call(rect);
-            
-        // Add title to parents
-        g.append("rect")
-            .attr("class", "parent")
-            .call(rect)
-            .append("title")
-            .text(function (d){
-                return d.data.name;
-            });
-
-        // Adding a foreign object instead of a text object, allows for text wrapping
-        g.append("foreignObject")
-            .call(rect)
-            .attr("class", "foreignobj")
-            .append("xhtml:div")
-            .attr("dy", ".75em")
-            .html(function (d) {
-                return '' +
-                    '<p class="title"> ' + d.data.name + '</p>' +
-                    '<p>' + formatNumber(d.value) + '</p>'
-                ;
-            })
-            .attr("class", "textdiv"); //textdiv class allows us to style the text easily with CSS
-
-        // Function to handle transitions
-        function transition(d) {
-            // Wait for an occuring transition to finish
-            if (transitioning || !d) return;
-            transitioning = true;
-
-            // Set time for a smooth transition
-            var g2 = display(d),
-                t1 = g1.transition().duration(350),
-                t2 = g2.transition().duration(350);
-
-
-            // Update the domain only after entering new elements.
-            x.domain([d.x0, d.x1]);
-            y.domain([d.y0, d.y1]);
-
-            // Draw child nodes on top of parent nodes.
-            svg.selectAll(".depth").sort(function (a, b) {
-                return a.depth - b.depth;
-            });
-
-            // Fade-in entering text.
-            g2.selectAll("text").style("fill-opacity", 0);
-            g2.selectAll("foreignObject div").style("display", "none");
-            
-            // Transition to the new view.
-            t1.selectAll("text").call(text).style("fill-opacity", 0);
-            t2.selectAll("text").call(text).style("fill-opacity", 1);
-            t1.selectAll("rect").call(rect);
-            t2.selectAll("rect").call(rect);
-            
-            // Foreign object
-            t1.selectAll(".textdiv").style("display", "none");
-            t1.selectAll(".foreignobj").call(foreign);
-            t2.selectAll(".textdiv").style("display", "block");
-            t2.selectAll(".foreignobj").call(foreign);
-
-            // Remove the old node when the transition is finished.
-            t1.on("end.remove", function(){
-                this.remove();
-                transitioning = false;  // Declare transitioning to be finished
-            });
+    // Function: Stack bars
+    function stack(i) {
+        let value = 0;
+        return d => {
+            const t = "translate(" + (x(value) - x(0)) + "," + (barHeight * i)  + ")"
+            value += d.value
+            return t;
         }
+    }
 
+    // Function: stagger bars
+    function stagger() {
+        let value = 0;
+        return (d, i) => {
+          const t = "translate(" + (x(value) - x(0)) + "," + (barHeight * i) + ")";
+          value += d.value;
+          return t;
+        };
+      }
+
+    // Function: return view
+    function up(svg, d) {
+        if (!d.parent || !svg.selectAll(".exit").empty()) return; // if at the top, do nothing
+
+        // Bind parent
+        svg.select(".background").datum(d.parent);
+
+        // The whole transition will have 2 sequences
+        const transition1 = svg.transition().duration(duration);
+        const transition2 = transition1.transition();
+
+        // Mark displayed bars
+        const exit = svg.selectAll(".enter")
+            .attr("class", "exit")
+
+        // Rescale x-axis
+        x.domain([0, d3.max(d.parent.children, d => d.value)]);
+        svg.selectAll(".x-axis").transition(transition1)
+            .call(xAxis)
+        
+        // Transition bars to new scale
+        exit.selectAll("g").transition(transition1)
+            .attr("transform", stagger());
+
+        // Transition bars to  parent
+        exit.selectAll("g").transition(transition2)
+            .attr("transform", stack(d.index));
+
+        // Fade parents and transition existing bars
+        exit.selectAll("rect").transition(transition1)
+            .attr("width", d => x(d.value) - x(0))
+            .attr("fill", color(true));
+
+        // Transition text
+        exit.transition(transition2)
+            .attr("fill-opacity", 0)
+            .remove();
+
+        // Enter the new bars for the clicked-on data's parent.
+        const enter = bar(svg, down, d.parent, ".exit")
+            .attr("fill-opacity", 0);
+
+        enter.selectAll("g")
+            .attr("transform", (d, i) => "translate(0," + (barHeight * i) + ")");
+
+        // Transition entering bars to fade in over the full duration.
+        enter.transition(transition2)
+            .attr("fill-opacity", 1);
+
+        // Color the bars as appropriate.
+        // Exiting nodes will obscure the parent bar, so hide it.
+        // Transition entering rects to the new x-scale.
+        // When the entering parent rect is done, make it visible!
+        enter.selectAll("rect")
+            .attr("fill", d => color(!!d.children))
+            .attr("fill-opacity", p => p === d ? 0 : null)  // if this was the parent, hide him
+            .transition(transition2)
+                .attr("width", d => x(d.value) - x(0))
+                .on("end", function() { d3.select(this).attr("fill-opacity", 1); });
+    }
+
+    // Function: expand items
+    function down(svg, d) {
+        if (!d.children || d3.active(svg.node())) return;  // do nothing if a node doesn't have any childrten
+      
+        // Rebind the current node to the background.
+        svg.select(".background").datum(d);
+      
+        // Define two sequenced transitions.
+        const transition1 = svg.transition().duration(duration);
+        const transition2 = transition1.transition();
+      
+        // Mark any currently-displayed bars as exiting.
+        const exit = svg.selectAll(".enter")
+            .attr("class", "exit");
+      
+        // Entering nodes immediately obscure the clicked-on bar, so hide it.
+        exit.selectAll("rect")
+            .attr("fill-opacity", p => p === d ? 0 : null);
+      
+        // Transition exiting bars to fade out.
+        exit.transition(transition1)
+            .attr("fill-opacity", 0)
+            .remove();
+      
+        // Enter the new bars for the clicked-on data.
+        // Per above, entering bars are immediately visible.
+        const enter = bar(svg, down, d, ".y-axis")
+            .attr("fill-opacity", 0);
+      
+        // Have the text fade-in, even though the bars are visible.
+        enter.transition(transition1)
+            .attr("fill-opacity", 1);
+      
+        // Transition entering bars to their new y-position.
+        enter.selectAll("g")
+            .attr("transform", stack(d.index))
+            .transition(transition1)
+            .attr("transform", stagger());
+      
+        // Update the x-scale domain.
+        x.domain([0, d3.max(d.children, d => d.value)]);
+      
+        // Update the x-axis.
+        svg.selectAll(".x-axis").transition(transition2)
+            .call(xAxis);
+      
+        // Transition entering bars to the new x-scale.
+        enter.selectAll("g").transition(transition2)
+            .attr("transform", (d, i) => "translate(0," + (barHeight * i) + ")");
+      
+        // Color the bars as parents; they will fade to children if appropriate.
+        enter.selectAll("rect")
+            .attr("fill", color(true))
+            .attr("fill-opacity", 1)
+            .transition(transition2)
+            .attr("fill", d => color(!!d.children))
+            .attr("width", d => x(d.value) - x(0));
+
+      }
+
+    // Creates a set of bars for the given data node, at the specified index.
+    function bar(svg, down, d, selector) {
+        const g = svg.insert("g", selector)
+            .attr("class", "enter")
+            .attr("transform", "translate(0," + (margin.top + padding.top + barHeight * barPadding) + ")")
+            .attr("text-anchor", "end")
+            .style("font", "10px Arial");
+    
+        const bar = g.selectAll("g")
+        .data(d.children)
+        .join("g")
+            .attr("cursor", d => !d.children ? null : "pointer")
+            .on("click", (event, d) => down(svg, d));
+    
+        bar.append("text")
+            .attr("x", margin.left + padding.left - 6)
+            .attr("y", barHeight * (1 - barPadding) / 2)
+            .attr("dy", ".35em")
+            .text(d => d.data.name);
+    
+        bar.append("rect")
+            .attr("x", x(0))
+            .attr("width", d => x(d.value) - x(0))
+            .attr("height", barHeight * (1 - barPadding));
+    
         return g;
     }
 
-    // Utility functions
-    // -----------------
-    function text(text) {
-        text.attr("x", function (d) {return x(d.x) + 6;})
-            .attr("y", function (d) {return y(d.y) + 6;});
-    }
+    // Execute
+    // -------
+    // scale to base
+    x.domain([0, root.value]);
 
-    function rect(rect) {
-        rect
-            .attr("x", function (d) {return x(d.x0);})
-            .attr("y", function (d) {return y(d.y0);})
-            .attr("width", function (d) {return x(d.x1) - x(d.x0);})
-            .attr("height", function (d) {return y(d.y1) - y(d.y0);})
-            .style("fill", function(d){ return color(getParentName(d));} )
-    }
+    // Add background rectangle to zoom back
+    var parent = svg.append("g")
+        .attr("class", "parent")
 
-    function foreign(foreign) { /* added */
-        foreign
-            .attr("x", function (d) {return x(d.x0);})
-            .attr("y", function (d) {return y(d.y0);})
-            .attr("width", function (d) {return x(d.x1) - x(d.x0);})
-            .attr("height", function (d) {return y(d.y1) - y(d.y0);});
-    }
+    svg.append("rect")
+        .attr("class", "background")
+        .attr("fill", "none")  // Set fill to none
+        .attr("pointer-events", "all")
+        .attr("width", graphWidth)
+        .attr("height", graphHeight)
+        .attr("cursor", "pointer")  // change cursor when hovering over
+        .on("click", (event, d) => up(svg, d));  // execute up on click
 
-    function name(d) {
-        return breadcrumbs(d) +
-            (d.parent
-            ? " (  Click to zoom out )"
-            : " ");
-    }
+    // Draw axes
+    svg.append("g")
+        .call(xAxis);
+    svg.append("g")
+        .call(yAxis);
 
-    function breadcrumbs(d) {
-        var res = "";
-        var sep = " > ";
-        d.ancestors().reverse().forEach(function(i){res += i.data.name + sep;});
-        return res
-            .split(sep)
-            .filter(function(i){return i!== "";})
-            .join(sep);
-    }
-
-    // Get initial parent's name
-    function getParentName(data) {
-        if (data.depth < 2) {
-           return data.data.name
-        } else {
-           return getParentName(data.parent)
-        }
-     }
+    // Draw root
+    down(svg, root);
+    
+    // document.write("Still alive!");
 }

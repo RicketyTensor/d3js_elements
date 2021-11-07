@@ -5,6 +5,11 @@
         <META HTTP-EQUIV="PRAGMA" CONTENT="NO-CACHE">
         <script type="text/javascript" src="{{ url_for('static', filename = 'zoom_bar.js') }}"></script>
         <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename = 'css/zoom_style.css') }}">
+        <style>
+            /* Color not to blind myself while developing */
+            body {background-color:#002b36;
+                 color: #ccc} 
+        </style>
     </head>
     <body>
         <!-- Load d3.js --> 
@@ -12,11 +17,11 @@
 
         <h1>Testing a zoomable bar chart</h1>
         <!-- Define div for the treeview -->
-        <div id="div_treeview"></div>
+        <div id="div_chart"></div>
 
         <!-- Run the script for the treeview-->
         <script type="text/javascript">
-            zoomTreeFunc(JSON.parse('{{ data | tojson | safe }}'));
+            zoomBarFunc(JSON.parse('{{ data | tojson | safe }}'));
         </script>  
 
     </body>
