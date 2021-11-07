@@ -16,7 +16,7 @@ function zoomTreeFunc(data) {
         .range([0, height]);
         
     // Ceate svg canvas
-    var svg = d3.select("#div_treeview")
+    var svg = d3.select("#div_chart")
         .append("svg")
             .attr("width", width + margin.left + margin.right)
             .attr("height", height + margin.bottom + margin.top)
@@ -125,7 +125,7 @@ function zoomTreeFunc(data) {
             .attr("class", "textdiv"); //textdiv class allows us to style the text easily with CSS
 
         // Function to handle transitions
-        function transition(d) {
+        function transition(event, d) {
             // Wait for an occuring transition to finish
             if (transitioning || !d) return;
             transitioning = true;
